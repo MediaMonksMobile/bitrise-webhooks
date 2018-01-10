@@ -23,6 +23,8 @@ If the (commit) message includes `[skip ci]` or `[ci skip]` no build will be tri
   * handled on the path: `/h/github/BITRISE-APP-SLUG/BITRISE-APP-API-TOKEN`
 * [Bitbucket](https://bitbucket.org) webhooks V2 ("Webhooks" on the Bitbucket web UI)
   * handled on the path: `/h/bitbucket-v2/BITRISE-APP-SLUG/BITRISE-APP-API-TOKEN`
+* [Bitbucket Server](https://bitbucket.org)
+  * handled on the path: `/h/bitbucket-server/BITRISE-APP-SLUG/BITRISE-APP-API-TOKEN`
 * [Slack](https://slack.com) (both outgoing webhooks & slash commands)
   * handled on the path: `/h/slack/BITRISE-APP-SLUG/BITRISE-APP-API-TOKEN`
 * [Visual Studio Team Services](https://www.visualstudio.com/products/visual-studio-team-services-vs)
@@ -79,6 +81,23 @@ a [Bitbucket](https://bitbucket.org) *repository*.
 That's all! The next time you __push code__, __push a new tag__ or __create/update a pull request__
 a build will be triggered (if you have Trigger mapping defined for the event(s) on Bitrise).
 
+### Bitbucket Server Webhooks - setup & usage:
+
+All you have to do is register your `bitrise-webhooks` URL for
+a Bitbucket Server *repository*.
+
+1. Open your *repository* on your self hosted Bitbucket Server instance
+2. Go to `Settings` of the *repository*
+3. Select `Webhooks`
+4. Click on `Create webhook`
+5. Specify the `bitrise-webhooks` URL (`.../h/bitbucket-server/BITRISE-APP-SLUG/BITRISE-APP-API-TOKEN`) in the `URL` field
+6. In the *Events* section select the following properties:
+  * Repository > Push
+  * Pull Request > Opened
+7. Click `Save`
+
+That's all! The next time you __push code__, __push a new tag__ or __create/update a pull request__
+a build will be triggered (if you have Trigger mapping defined for the event(s) on Bitrise).
 
 ### GitLab - setup & usage:
 
@@ -439,8 +458,16 @@ response provider will be used.
       and `"failed_responses": []` JSON arrays
     * And all the errors (where the response was not available / call timed out, etc.)
       as a `"errors": []` JSON array (if any)
-    * If at least one call fails or the response is an error response
-      the HTTP status code will be `400`
+    * If at least one call fails:
+        * In case the error is not an internal error, nor an authorization or any other system error,
+          just the build could not be started (e.g. Trigger Map doesn't have any mapping for the trigger),
+          then the response code with be `200`. This is to prevent services to "disable" the Webhook,
+          as most of the git hosting services auto-disable webhooks if too many / too frequent non `2xx`
+          responses received.
+        * On the other hand, if it's a system error (e.g. an internal error or an authentication error)
+          then of course the webhook server will not return a `2xx` (success) code,
+          but instead it'll return a `400` error with as much details in the response about the
+          error as the server can determine.
     * If all trigger calls succeed the status code will be `201`
 * If the provider declares that it does not want to wait for the Trigger API response,
   then a response will be returned immediately after triggering a build (calling the Trigger API),
@@ -467,3 +494,4 @@ response provider will be used.
 * [Rafael Nobre](https://github.com/nobre84) - Environment variables support in `Slack` commands
 * [Tuomas Peippo](https://github.com/tume)- Skip CI feature
 * [Erik Poort](https://github.com/ErikMediaMonks) - `Assembla` support
+* [ChrisTitos](https://github.com/ChrisTitos) - `Bitbucket Server` support
